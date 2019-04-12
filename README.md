@@ -22,3 +22,5 @@ some additional options:
  * Kill worker threads on destroy (hard, dangerous)
  * Support Windows API (medium)
  * Reduce locking contention (medium/hard)
+ 
+ hahahaha
