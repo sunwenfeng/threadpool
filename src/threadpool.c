@@ -206,7 +206,7 @@ int threadpool_destroy(threadpool_t *pool, int flags)
         return threadpool_invalid;
     }
 
-    if(pthread_mutex_lock(&(pool->lock)) != 0) {//获取互斥锁，为了使用224行使用条件变量
+    if(pthread_mutex_lock(&(pool->lock)) != 0) {//获取互斥锁
         return threadpool_lock_failure;
     }
 
@@ -221,7 +221,7 @@ int threadpool_destroy(threadpool_t *pool, int flags)
             graceful_shutdown : immediate_shutdown;
 
         /* Wake up all worker threads */
-        if((pthread_cond_broadcast(&(pool->notify)) != 0) ||//有些线程可能因为任务队列为空阻塞在条件变量上，唤醒，然后解锁
+        if((pthread_cond_broadcast(&(pool->notify)) != 0) ||//有些线程可能因为任务队列为空阻塞在条件变量上，唤醒所有阻塞线程 ，并且解互斥锁
            (pthread_mutex_unlock(&(pool->lock)) != 0)) {
             err = threadpool_lock_failure;
             break;
@@ -274,9 +274,9 @@ static void *threadpool_thread(void *threadpool)
     threadpool_t *pool = (threadpool_t *)threadpool;//定义pool指向当前线程池
     threadpool_task_t task;
 
-    for(;;) {
+    for(;;) {//循环，每个线程创建之后就不断的执行任务，每次都从任务队列的头部取。没有任务就阻塞
         /* Lock must be taken to wait on conditional variable */
-        pthread_mutex_lock(&(pool->lock));//获取条件变量锁
+        pthread_mutex_lock(&(pool->lock));//获取互斥锁
 
         /* Wait on condition variable, check for spurious wakeups.
            When returning from pthread_cond_wait(), we own the lock. */
@@ -287,9 +287,9 @@ static void *threadpool_thread(void *threadpool)
         //虽然threadpool_add每添加一个新任务就通知threadpool_thread，但threadpool_thread只有队列中没有待执行任务时才会等待
 
         if((pool->shutdown == immediate_shutdown) ||
-           ((pool->shutdown == graceful_shutdown) &&
-            (pool->count == 0))) {//如果关闭
-            break;
+                     ((pool->shutdown == graceful_shutdown) &&
+                      (pool->count == 0))) {//如果关闭
+                break;
         }
 
         /* Grab our task 线程池每次新建一个线程时，就执行threadpool_thread，本函数从任务队列的头部选取一个函数执行，然后更新任务队列的头部和
@@ -310,7 +310,7 @@ static void *threadpool_thread(void *threadpool)
 
     pool->started--;//更新正在运行的线程数
 
-    pthread_mutex_unlock(&(pool->lock));   //？？？？？是否重复解锁
+    pthread_mutex_unlock(&(pool->lock));   //有可能在289那行由于线程池关闭，shutdown为真，直接退出上面个的循环，没有执行到304行的解锁，在此处解锁
     pthread_exit(NULL);
     return(NULL);
 }

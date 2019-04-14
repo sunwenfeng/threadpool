@@ -17,7 +17,12 @@ void dummy_task(void *arg) {
     done++;
     pthread_mutex_unlock(&lock);
 }
-
+/*线程池测试，任务队列长度256，创建32个线程
+ *
+ * 创建线程池并执行任务队列中的任务
+ * 当执行的任务数超过一半时，调用destroy销毁线程池
+ *
+ * */
 int main(int argc, char **argv)
 {
     threadpool_t *pool;
@@ -38,6 +43,7 @@ int main(int argc, char **argv)
 
     while((tasks / 2) > done) {
         usleep(10000);
+
     }
     assert(threadpool_destroy(pool, 0) == 0);
     fprintf(stderr, "Did %d tasks\n", done);
