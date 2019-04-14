@@ -42,8 +42,8 @@ extern "C" {
  * Increase this constants at your own risk
  * Large values might slow down your system
  */
-#define MAX_THREADS 64
-#define MAX_QUEUE 65536
+#define MAX_THREADS 64  //线程池中线程数
+#define MAX_QUEUE 65536 //任务队列的最大长度
 
 typedef struct threadpool_t threadpool_t;
 
@@ -53,7 +53,7 @@ typedef enum {
     threadpool_queue_full     = -3,
     threadpool_shutdown       = -4,
     threadpool_thread_failure = -5
-} threadpool_error_t;
+} threadpool_error_t; //枚举线程池错误
 
 typedef enum {
     threadpool_graceful       = 1
@@ -68,7 +68,7 @@ typedef enum {
  * @return a newly created thread pool or NULL
  */
 threadpool_t *threadpool_create(int thread_count, int queue_size, int flags);
-
+//创建线程池对象
 /**
  * @function threadpool_add
  * @brief add a new task in the queue of a thread pool
@@ -81,7 +81,7 @@ threadpool_t *threadpool_create(int thread_count, int queue_size, int flags);
  */
 int threadpool_add(threadpool_t *pool, void (*routine)(void *),
                    void *arg, int flags);
-
+//向线程池任务队列中添加一个新任务
 /**
  * @function threadpool_destroy
  * @brief Stops and destroys a thread pool.
@@ -93,7 +93,7 @@ int threadpool_add(threadpool_t *pool, void (*routine)(void *),
  * processes all pending tasks before shutdown.
  */
 int threadpool_destroy(threadpool_t *pool, int flags);
-
+//销毁线程池
 #ifdef __cplusplus
 }
 #endif
