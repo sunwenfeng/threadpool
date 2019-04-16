@@ -1,26 +1,13 @@
-[![Build Status](https://travis-ci.org/mbrossard/threadpool.svg?branch=master)](https://travis-ci.org/mbrossard/threadpool)
-
-A simple C thread pool implementation
-=====================================
-
-Currently, the implementation:
- * Works with pthreads only, but API is intentionally opaque to allow
-   other implementations (Windows for instance).
- * Starts all threads on creation of the thread pool.
- * Reserves one task for signaling the queue is full.
- * Stops and joins all worker threads on destroy.
-
-Possible enhancements
-=====================
-
-The API contains addtional unused 'flags' parameters that would allow
-some additional options:
-
- * Lazy creation of threads (easy)
- * Reduce number of threads automatically (hard)
- * Unlimited queue size (medium)
- * Kill worker threads on destroy (hard, dangerous)
- * Support Windows API (medium)
- * Reduce locking contention (medium/hard)
+ # threadpool流程分析
  
- # threadpool
+ ## 线程池的创建与执行
+ threadpool_create创建线程池时，首先分配线程池数组和任务队列数组的空间，然后调用pthread_create创建线程，此时任务队列为空。
+ 这样新创建的线程由于任务队列为空，所以都阻塞了。必须等待任务队列中有任务才能取执行。这部分实现使用条件变量。
+ 当用threadpool_add添加很多任务后，每个线程在取新任务时直接从任务队列头部取出并执行。由于需要不断的执行任务，所以threadpool_thread采用一个死循环。
+
+ ## 线程池的销毁
+ 首先考虑到一个情况，就是在销毁的时候有可能任务队列已经为空，有若干线程阻塞在了条件变量上，首先将这些线程唤醒。
+ 设置线程池的shutdown属性为真，这样每个线程在死循环中检测到shutdown为真后就退出死循环，然后用exit退出线程。
+ 然后pthread_join等待所有线程退出，并且释放资源。
+ 然后调用threadpool_free释放其他资源。
+
